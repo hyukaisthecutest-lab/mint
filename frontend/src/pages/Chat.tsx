@@ -1,6 +1,6 @@
 import { useState, useRef, useEffect } from "react";
-import { Mic, MicOff, Send, Bot, User } from "lucide-react";
-import { sendMessage, transcribeAudio, ChatMessage } from "../api/chat";
+import { Mic, MicOff, Send, Bot, User, Trash2 } from "lucide-react";
+import { sendMessage, transcribeAudio, fetchHistory, clearHistory, ChatMessage } from "../api/chat";
 import { useAudioRecorder } from "../hooks/useAudioRecorder";
 
 function newTraceId() {
@@ -50,8 +50,16 @@ export default function Chat() {
   const [loading, setLoading] = useState(false);
   const [voiceMode, setVoiceMode] = useState(false);
   const [transcribing, setTranscribing] = useState(false);
+  const [sessionLoaded, setSessionLoaded] = useState(false);
   const bottomRef = useRef<HTMLDivElement>(null);
   const { recording, start, stop } = useAudioRecorder();
+
+  useEffect(() => {
+    fetchHistory().then((msgs) => {
+      setHistory(msgs.map((m) => ({ ...m })));
+      setSessionLoaded(true);
+    }).catch(() => setSessionLoaded(true));
+  }, []);
 
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -62,6 +70,11 @@ export default function Chat() {
     audio.play();
   };
 
+  const handleClear = async () => {
+    await clearHistory();
+    setHistory([]);
+  };
+
   const submit = async (message: string, isVoice: boolean) => {
     if (!message.trim()) return;
     const traceId = newTraceId();
@@ -70,7 +83,7 @@ export default function Chat() {
     setInput("");
     setLoading(true);
     try {
-      const res = await sendMessage(message, history, isVoice, traceId);
+      const res = await sendMessage(message, isVoice, traceId);
       const assistantMsg: MessageWithMeta = {
         role: "assistant",
         content: res.text,
@@ -109,18 +122,30 @@ export default function Chat() {
 
   return (
     <div className="flex flex-col h-full bg-gray-50">
-      <div className="px-6 py-4 bg-white border-b border-gray-100 flex items-center gap-3">
-        <div className="w-9 h-9 rounded-full bg-mint-600 flex items-center justify-center">
-          <Bot className="w-5 h-5 text-white" />
+      <div className="px-6 py-4 bg-white border-b border-gray-100 flex items-center justify-between">
+        <div className="flex items-center gap-3">
+          <div className="w-9 h-9 rounded-full bg-mint-600 flex items-center justify-center">
+            <Bot className="w-5 h-5 text-white" />
+          </div>
+          <div>
+            <p className="font-semibold text-gray-900">Finance Assistant</p>
+            <p className="text-xs text-gray-400">Ask about your spending, budget, and more</p>
+          </div>
         </div>
-        <div>
-          <p className="font-semibold text-gray-900">Finance Assistant</p>
-          <p className="text-xs text-gray-400">Ask about your spending, budget, and more</p>
-        </div>
+        {history.length > 0 && (
+          <button
+            onClick={handleClear}
+            className="flex items-center gap-1.5 text-xs text-gray-400 hover:text-red-500 transition-colors px-3 py-1.5 rounded-lg hover:bg-red-50"
+            title="Clear history"
+          >
+            <Trash2 className="w-3.5 h-3.5" />
+            Clear
+          </button>
+        )}
       </div>
 
       <div className="flex-1 overflow-y-auto px-6 py-6 space-y-4">
-        {history.length === 0 && (
+        {sessionLoaded && history.length === 0 && (
           <div className="text-center text-gray-400 mt-16">
             <Bot className="w-12 h-12 mx-auto mb-3 text-gray-300" />
             <p className="font-medium">Hi! I'm your finance assistant.</p>

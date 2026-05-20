@@ -12,15 +12,23 @@ export interface ChatResponse {
   elapsed_ms: number;
 }
 
+export async function fetchHistory(): Promise<ChatMessage[]> {
+  const res = await client.get("/chat/history");
+  return res.data.history;
+}
+
+export async function clearHistory(): Promise<void> {
+  await client.delete("/chat/history");
+}
+
 export async function sendMessage(
   message: string,
-  history: ChatMessage[],
   voiceMode: boolean,
   traceId: string
 ): Promise<ChatResponse> {
   const res = await client.post(
     "/chat",
-    { message, history, voice_mode: voiceMode },
+    { message, voice_mode: voiceMode },
     { headers: { "X-Trace-ID": traceId } }
   );
   return res.data;

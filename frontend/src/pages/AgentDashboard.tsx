@@ -6,6 +6,14 @@ import {
 import { Activity, Zap, AlertTriangle, Shield, Cpu, Clock } from "lucide-react";
 import { useAuthStore } from "../store/authStore";
 
+interface ActivityEntry {
+  ts: number;
+  user_id: string;
+  message: string;
+  status: "active" | "ok" | "error";
+  latency_ms: number | null;
+}
+
 interface Snapshot {
   ts: number;
   active: number;
@@ -16,6 +24,7 @@ interface Snapshot {
   blocked_per_min: number;
   tool_calls: Record<string, number>;
   tokens: { prompt: number; completion: number };
+  activity: ActivityEntry[];
 }
 
 const MAX_HISTORY = 40;
@@ -49,21 +58,23 @@ export default function AgentDashboard() {
   const [history, setHistory] = useState<Snapshot[]>([]);
   const [latest, setLatest] = useState<Snapshot | null>(null);
   const [connected, setConnected] = useState(false);
-  const esRef = useRef<EventSource | null>(null);
+  const esRef = useRef<WebSocket | null>(null);
 
   useEffect(() => {
-    const es = new EventSource(`/api/v1/agent/status/stream`, {});
-    esRef.current = es;
+    const proto = window.location.protocol === "https:" ? "wss" : "ws";
+    const ws = new WebSocket(`${proto}://${window.location.host}/api/v1/agent/status/ws?token=${token}`);
+    esRef.current = ws;
 
-    es.onopen = () => setConnected(true);
-    es.onmessage = (e) => {
+    ws.onopen = () => setConnected(true);
+    ws.onmessage = (e) => {
       const snap: Snapshot = JSON.parse(e.data);
       setLatest(snap);
       setHistory((h) => [...h.slice(-MAX_HISTORY + 1), snap]);
     };
-    es.onerror = () => setConnected(false);
+    ws.onclose = () => setConnected(false);
+    ws.onerror = () => setConnected(false);
 
-    return () => es.close();
+    return () => ws.close();
   }, [token]);
 
   const chartData = history.map((s) => ({
@@ -172,7 +183,7 @@ export default function AgentDashboard() {
       </div>
 
       {/* Tool calls */}
-      <div className="card">
+      <div className="card mb-6">
         <h2 className="text-sm font-semibold text-gray-700 mb-4">Tool Calls (all time)</h2>
         {toolData.length === 0 ? (
           <p className="text-gray-400 text-sm text-center py-6">No tool calls recorded yet</p>
@@ -189,6 +200,53 @@ export default function AgentDashboard() {
               </Bar>
             </BarChart>
           </ResponsiveContainer>
+        )}
+      </div>
+
+      {/* User activity */}
+      <div className="card">
+        <h2 className="text-sm font-semibold text-gray-700 mb-4">Recent User Activity</h2>
+        {(!latest?.activity?.length) ? (
+          <p className="text-gray-400 text-sm text-center py-6">No activity yet</p>
+        ) : (
+          <div className="overflow-x-auto">
+            <table className="w-full text-sm">
+              <thead>
+                <tr className="text-xs text-gray-400 uppercase border-b border-gray-100">
+                  <th className="text-left pb-2 pr-4">Time</th>
+                  <th className="text-left pb-2 pr-4">User ID</th>
+                  <th className="text-left pb-2 pr-4">Message</th>
+                  <th className="text-left pb-2 pr-4">Status</th>
+                  <th className="text-right pb-2">Latency</th>
+                </tr>
+              </thead>
+              <tbody>
+                {latest.activity.map((a, i) => (
+                  <tr key={i} className="border-b border-gray-50 hover:bg-gray-50">
+                    <td className="py-2 pr-4 text-gray-400 font-mono text-xs whitespace-nowrap">
+                      {new Date(a.ts).toLocaleTimeString()}
+                    </td>
+                    <td className="py-2 pr-4 font-mono text-xs text-gray-500 whitespace-nowrap">
+                      {a.user_id.slice(0, 8)}…
+                    </td>
+                    <td className="py-2 pr-4 text-gray-700 max-w-xs truncate">{a.message}</td>
+                    <td className="py-2 pr-4">
+                      <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium ${
+                        a.status === "ok" ? "bg-green-100 text-green-700" :
+                        a.status === "error" ? "bg-red-100 text-red-700" :
+                        "bg-yellow-100 text-yellow-700"
+                      }`}>
+                        {a.status === "active" ? "⏳ active" : a.status === "ok" ? "✓ ok" : "✗ error"}
+                      </span>
+                    </td>
+                    <td className="py-2 text-right text-gray-400 font-mono text-xs">
+                      {a.latency_ms != null ? `${a.latency_ms}ms` : "—"}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
         )}
       </div>
     </div>

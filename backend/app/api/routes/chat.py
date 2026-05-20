@@ -14,6 +14,7 @@ from app.core.database import get_db
 from app.core.config import settings
 from app.core.telemetry import tracer, agent_requests, agent_errors, agent_duration
 from app.core.metrics_store import store
+from app.core.session_store import get_history, append_messages, clear_history
 from app.models.user import User
 from app.dependencies import get_current_user
 from app.agent.graph import create_graph
@@ -38,14 +39,8 @@ _RETRY = dict(
 )
 
 
-class ChatMessage(BaseModel):
-    role: str
-    content: str
-
-
 class ChatRequest(BaseModel):
     message: str
-    history: list[ChatMessage] = []
     voice_mode: bool = False
 
 
@@ -62,6 +57,17 @@ def _tts(text: str) -> str:
     return base64.b64encode(tts.read()).decode()
 
 
+@router.get("/history")
+def history(current_user: User = Depends(get_current_user)):
+    return {"history": get_history(str(current_user.id))}
+
+
+@router.delete("/history")
+def delete_history(current_user: User = Depends(get_current_user)):
+    clear_history(str(current_user.id))
+    return {"ok": True}
+
+
 @router.post("")
 def chat(
     request: Request,
@@ -71,41 +77,49 @@ def chat(
 ):
     trace_id = request.headers.get("X-Trace-ID", "none")
     t0 = time.perf_counter()
+    user_id = str(current_user.id)
 
-    store.request_start()
+    store.request_start(user_id=user_id, message=payload.message)
     agent_requests.labels(voice_mode=str(payload.voice_mode)).inc()
+
+    session = get_history(user_id)
     logger.info("chat_request", extra={"extra": {
         "trace_id": trace_id,
-        "user_id": current_user.id,
+        "user_id": user_id,
         "voice_mode": payload.voice_mode,
         "message_preview": payload.message[:100],
-        "history_len": len(payload.history),
+        "history_len": len(session),
     }})
 
     with tracer.start_as_current_span("chat.request") as span:
         span.set_attribute("trace_id", trace_id)
-        span.set_attribute("user_id", current_user.id)
+        span.set_attribute("user_id", user_id)
         span.set_attribute("voice_mode", payload.voice_mode)
         span.set_attribute("message", payload.message[:200])
 
         messages = []
-        for msg in payload.history:
-            if msg.role == "user":
-                messages.append(HumanMessage(content=msg.content))
-            elif msg.role == "assistant":
-                messages.append(AIMessage(content=msg.content))
+        for msg in session:
+            if msg["role"] == "user":
+                messages.append(HumanMessage(content=msg["content"]))
+            elif msg["role"] == "assistant":
+                messages.append(AIMessage(content=msg["content"]))
         messages.append(HumanMessage(content=payload.message))
 
         try:
-            answer = _invoke_agent(current_user.id, db, messages)
+            answer = _invoke_agent(user_id, db, messages)
         except Exception as e:
             agent_errors.labels(step="agent").inc()
-            store.request_end(latency_ms=(time.perf_counter() - t0) * 1000, error=True)
+            store.request_end(latency_ms=(time.perf_counter() - t0) * 1000, error=True, user_id=user_id)
             span.set_status(trace.StatusCode.ERROR, str(e))
             logger.error("chat_agent_error", extra={"extra": {
-                "trace_id": trace_id, "user_id": current_user.id, "error": str(e),
+                "trace_id": trace_id, "user_id": user_id, "error": str(e),
             }})
             raise HTTPException(status_code=500, detail="Agent failed to respond. Please try again.")
+
+        append_messages(user_id, [
+            {"role": "user", "content": payload.message},
+            {"role": "assistant", "content": answer},
+        ])
 
         audio_b64: str | None = None
         if payload.voice_mode:
@@ -119,12 +133,12 @@ def chat(
 
         elapsed = time.perf_counter() - t0
         agent_duration.labels(step="total").observe(elapsed)
-        store.request_end(latency_ms=elapsed * 1000)
+        store.request_end(latency_ms=elapsed * 1000, user_id=user_id)
         span.set_attribute("elapsed_s", round(elapsed, 3))
 
         logger.info("chat_response", extra={"extra": {
             "trace_id": trace_id,
-            "user_id": current_user.id,
+            "user_id": user_id,
             "elapsed_s": round(elapsed, 3),
             "has_audio": audio_b64 is not None,
         }})

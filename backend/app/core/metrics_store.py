@@ -17,6 +17,7 @@ class MetricsStore:
         self._active: int = 0
         self._tool_calls: dict[str, int] = {}
         self._tokens: dict[str, int] = {"prompt": 0, "completion": 0}
+        self._activity: deque[dict] = deque(maxlen=50)
 
     def _prune(self, now: float) -> None:
         cutoff = now - self._w
@@ -26,14 +27,22 @@ class MetricsStore:
         while self._latencies and self._latencies[0][0] < cutoff:
             self._latencies.popleft()
 
-    def request_start(self) -> None:
+    def request_start(self, user_id: str = "", message: str = "") -> None:
         with self._lock:
             now = time.time()
             self._requests.append(now)
             self._active += 1
             self._prune(now)
+            if user_id:
+                self._activity.append({
+                    "ts": round(now * 1000),
+                    "user_id": user_id,
+                    "message": message[:80],
+                    "status": "active",
+                    "latency_ms": None,
+                })
 
-    def request_end(self, latency_ms: float, error: bool = False) -> None:
+    def request_end(self, latency_ms: float, error: bool = False, user_id: str = "") -> None:
         with self._lock:
             now = time.time()
             self._latencies.append((now, latency_ms))
@@ -41,6 +50,12 @@ class MetricsStore:
                 self._errors.append(now)
             self._active = max(0, self._active - 1)
             self._prune(now)
+            if user_id:
+                for entry in reversed(self._activity):
+                    if entry["user_id"] == user_id and entry["status"] == "active":
+                        entry["status"] = "error" if error else "ok"
+                        entry["latency_ms"] = round(latency_ms)
+                        break
 
     def record_blocked(self) -> None:
         with self._lock:
@@ -78,6 +93,7 @@ class MetricsStore:
                 "blocked_per_min": round(len(self._blocked) * scale, 1),
                 "tool_calls": dict(self._tool_calls),
                 "tokens": dict(self._tokens),
+                "activity": list(reversed(self._activity)),
             }
 
 
