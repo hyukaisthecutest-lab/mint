@@ -18,6 +18,14 @@ jobs:
           key: ${{ secrets.EC2_SSH_KEY }}
           envs: SECRET_KEY,VITE_API_URL,BACKEND_CORS_ORIGINS
           script: |
+            if ! command -v docker &> /dev/null; then
+              curl -fsSL https://get.docker.com | sh
+              sudo usermod -aG docker $USER
+              newgrp docker
+            fi
+            if [ ! -d ~/mint ]; then
+              git clone https://github.com/${{ github.repository }}.git ~/mint
+            fi
             cd ~/mint
             git pull origin main
             SECRET_KEY=$SECRET_KEY \
