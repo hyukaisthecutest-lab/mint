@@ -13,6 +13,8 @@ class Settings(BaseSettings):
     BACKEND_CORS_ORIGINS: str = '["http://localhost:5173","http://localhost:3000"]'
 
     def get_cors_origins(self) -> List[str]:
+        if not self.BACKEND_CORS_ORIGINS:
+            return []
         return json.loads(self.BACKEND_CORS_ORIGINS)
 
     class Config:
