@@ -1,5 +1,10 @@
 from __future__ import annotations
 import uuid
+from typing import TYPE_CHECKING
+
+if TYPE_CHECKING:
+    from app.models.user import User
+    from app.models.transaction import Transaction
 from datetime import datetime, timezone
 from decimal import Decimal
 from sqlalchemy import String, DateTime, Boolean, Numeric, ForeignKey

@@ -1,5 +1,10 @@
 from __future__ import annotations
 import uuid
+from typing import TYPE_CHECKING
+
+if TYPE_CHECKING:
+    from app.models.account import Account
+    from app.models.transaction import Transaction
 from datetime import datetime, timezone
 from sqlalchemy import String, DateTime
 from sqlalchemy.orm import Mapped, mapped_column, relationship
