@@ -1,0 +1,40 @@
+version: "3.9"
+
+services:
+  backend:
+    build:
+      context: ./backend
+      target: production
+    volumes: []
+    environment:
+      DATABASE_URL: postgresql://mint_user:mint_pass@postgres:5432/mint_db
+      REDIS_URL: redis://redis:6379/0
+      SECRET_KEY: ${SECRET_KEY}
+      ACCESS_TOKEN_EXPIRE_MINUTES: 60
+      ENVIRONMENT: production
+      BACKEND_CORS_ORIGINS: ${BACKEND_CORS_ORIGINS}
+    command: []
+
+  celery_worker:
+    build:
+      context: ./backend
+      target: production
+    volumes: []
+    environment:
+      DATABASE_URL: postgresql://mint_user:mint_pass@postgres:5432/mint_db
+      REDIS_URL: redis://redis:6379/0
+      SECRET_KEY: ${SECRET_KEY}
+      ENVIRONMENT: production
+    command: celery -A app.core.celery_app worker --loglevel=info
+
+  frontend:
+    build:
+      context: ./frontend
+      target: production
+      args:
+        VITE_API_URL: ${VITE_API_URL}
+    ports:
+      - "80:80"
+    volumes: []
+    environment: []
+    command: []

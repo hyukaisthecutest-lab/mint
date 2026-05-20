@@ -16,9 +16,17 @@ jobs:
           host: ${{ secrets.EC2_HOST }}
           username: ${{ secrets.EC2_USER }}
           key: ${{ secrets.EC2_SSH_KEY }}
+          envs: SECRET_KEY,VITE_API_URL,BACKEND_CORS_ORIGINS
           script: |
             cd ~/mint
             git pull origin main
-            docker compose up -d --build
-            docker compose exec -T backend alembic upgrade head
+            SECRET_KEY=$SECRET_KEY \
+            VITE_API_URL=$VITE_API_URL \
+            BACKEND_CORS_ORIGINS=$BACKEND_CORS_ORIGINS \
+            docker compose -f docker-compose.yml -f docker-compose.prod.yml up -d --build
+            docker compose -f docker-compose.yml -f docker-compose.prod.yml exec -T backend alembic upgrade head
             echo "Deploy complete"
+        env:
+          SECRET_KEY: ${{ secrets.SECRET_KEY }}
+          VITE_API_URL: ${{ secrets.VITE_API_URL }}
+          BACKEND_CORS_ORIGINS: ${{ secrets.BACKEND_CORS_ORIGINS }}
