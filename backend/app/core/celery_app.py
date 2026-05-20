@@ -6,7 +6,7 @@ celery_app = Celery(
     "mint",
     broker=settings.REDIS_URL,
     backend=settings.REDIS_URL,
-    include=["app.tasks.sync_tasks", "app.tasks.budget_tasks"],
+    include=["app.tasks.sync_tasks", "app.tasks.budget_tasks", "app.tasks.chat_tasks", "app.tasks.receipt_tasks"],
 )
 
 celery_app.conf.update(

@@ -20,6 +20,8 @@ class AgentObserver(BaseCallbackHandler):
     def __init__(self) -> None:
         self._t: dict[UUID, float] = {}
         self._spans: dict[UUID, Any] = {}
+        self.total_prompt_tokens: int = 0
+        self.total_completion_tokens: int = 0
 
     # ── LLM ──────────────────────────────────────────────────────────────────
 
@@ -37,6 +39,8 @@ class AgentObserver(BaseCallbackHandler):
             usage = response.llm_output.get("token_usage", {})
         prompt_t = usage.get("prompt_tokens", 0)
         completion_t = usage.get("completion_tokens", 0)
+        self.total_prompt_tokens += prompt_t
+        self.total_completion_tokens += completion_t
         token_usage.labels(type="prompt").inc(prompt_t)
         token_usage.labels(type="completion").inc(completion_t)
         store.record_tokens(prompt_t, completion_t)

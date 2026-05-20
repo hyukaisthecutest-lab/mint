@@ -4,6 +4,33 @@ from pydantic import BaseModel
 from typing import Optional
 
 
+class TransactionCreate(BaseModel):
+    account_id: str
+    amount: Decimal
+    description: str
+    category: str
+    merchant: Optional[str] = None
+    transaction_date: date
+
+
+class ReceiptLineItem(BaseModel):
+    name: str
+    quantity: Optional[Decimal] = None
+    unit_price: Optional[Decimal] = None
+    total: Optional[Decimal] = None
+
+
+class ReceiptScanResponse(BaseModel):
+    merchant: Optional[str] = None
+    amount: Optional[Decimal] = None
+    description: str = ""
+    category: str = "Shopping"
+    transaction_date: Optional[date] = None
+    tax: Optional[Decimal] = None
+    tip: Optional[Decimal] = None
+    items: list[ReceiptLineItem] = []
+
+
 class TransactionResponse(BaseModel):
     id: str
     account_id: str

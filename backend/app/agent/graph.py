@@ -20,15 +20,13 @@ Format all amounts as USD currency."""
 _BLOCKED = "I can only help with questions about your personal finances, spending, and budget. Please ask me something related to your accounts or transactions."
 
 
-_observer = AgentObserver()
-
-
-def create_graph(user_id: str, db: Session):
+def create_graph(user_id: str, db: Session, observer: AgentObserver | None = None):
+    obs = observer or AgentObserver()
     tools = make_tools(user_id, db)
     model = ChatOpenAI(
         model="gpt-4o",
         api_key=settings.OPENAI_API_KEY,
-        callbacks=[_observer],
+        callbacks=[obs],
     ).bind_tools(tools)
     tool_node = ToolNode(tools, handle_tool_errors=True)
 
@@ -53,7 +51,7 @@ def create_graph(user_id: str, db: Session):
         t0 = time.perf_counter()
         with tracer.start_as_current_span("agent.think"):
             messages = [{"role": "system", "content": _SYSTEM}] + state["messages"]
-            result = model.invoke(messages, config={"callbacks": [_observer]})
+            result = model.invoke(messages, config={"callbacks": [obs]})
             agent_duration.labels(step="agent").observe(time.perf_counter() - t0)
         return {"messages": [result]}
 

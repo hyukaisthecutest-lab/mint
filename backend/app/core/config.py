@@ -13,6 +13,10 @@ class Settings(BaseSettings):
     BACKEND_CORS_ORIGINS: str = '["http://localhost:5173","http://localhost:3000"]'
     OPENAI_API_KEY: str = ""
     OTEL_ENDPOINT: str = "http://jaeger:4317"
+    AWS_ACCESS_KEY_ID: str = ""
+    AWS_SECRET_ACCESS_KEY: str = ""
+    AWS_REGION: str = "us-east-1"
+    LOCAL_RECEIPTS_DIR: str = "/tmp/mint_receipts"
     SMTP_HOST: str = "smtp.gmail.com"
     SMTP_PORT: int = 587
     SMTP_USER: str = ""

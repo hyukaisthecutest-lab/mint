@@ -48,6 +48,7 @@ export default function Chat() {
   const [history, setHistory] = useState<MessageWithMeta[]>([]);
   const [input, setInput] = useState("");
   const [loading, setLoading] = useState(false);
+  const [queued, setQueued] = useState(false);
   const [voiceMode, setVoiceMode] = useState(false);
   const [transcribing, setTranscribing] = useState(false);
   const [sessionLoaded, setSessionLoaded] = useState(false);
@@ -82,8 +83,10 @@ export default function Chat() {
     setHistory((h) => [...h, userMsg]);
     setInput("");
     setLoading(true);
+    setQueued(false);
     try {
-      const res = await sendMessage(message, isVoice, traceId);
+      const res = await sendMessage(message, isVoice, traceId, () => setQueued(true));
+      setQueued(false);
       const assistantMsg: MessageWithMeta = {
         role: "assistant",
         content: res.text,
@@ -94,6 +97,7 @@ export default function Chat() {
       if (res.audio) playAudio(res.audio);
     } finally {
       setLoading(false);
+      setQueued(false);
     }
   };
 
@@ -177,11 +181,18 @@ export default function Chat() {
               <Bot className="w-4 h-4 text-gray-600" />
             </div>
             <div className="bg-white border border-gray-100 shadow-sm rounded-2xl rounded-tl-sm px-4 py-3">
-              <div className="flex gap-1 items-center h-5">
-                <span className="w-2 h-2 bg-gray-400 rounded-full animate-bounce" style={{ animationDelay: "0ms" }} />
-                <span className="w-2 h-2 bg-gray-400 rounded-full animate-bounce" style={{ animationDelay: "150ms" }} />
-                <span className="w-2 h-2 bg-gray-400 rounded-full animate-bounce" style={{ animationDelay: "300ms" }} />
-              </div>
+              {queued ? (
+                <div className="flex items-center gap-2 text-xs text-amber-500">
+                  <span className="w-2 h-2 bg-amber-400 rounded-full animate-pulse" />
+                  Queued — waiting for AI availability…
+                </div>
+              ) : (
+                <div className="flex gap-1 items-center h-5">
+                  <span className="w-2 h-2 bg-gray-400 rounded-full animate-bounce" style={{ animationDelay: "0ms" }} />
+                  <span className="w-2 h-2 bg-gray-400 rounded-full animate-bounce" style={{ animationDelay: "150ms" }} />
+                  <span className="w-2 h-2 bg-gray-400 rounded-full animate-bounce" style={{ animationDelay: "300ms" }} />
+                </div>
+              )}
             </div>
           </div>
         )}
