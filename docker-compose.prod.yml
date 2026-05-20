@@ -5,6 +5,7 @@ services:
     build:
       context: ./backend
       target: production
+    restart: unless-stopped
     volumes: []
     environment:
       DATABASE_URL: postgresql://mint_user:mint_pass@postgres:5432/mint_db
@@ -24,6 +25,7 @@ services:
     build:
       context: ./backend
       target: production
+    restart: unless-stopped
     volumes: []
     environment:
       DATABASE_URL: postgresql://mint_user:mint_pass@postgres:5432/mint_db
@@ -38,6 +40,7 @@ services:
     command: celery -A app.core.celery_app worker --loglevel=info
 
   jaeger:
+    restart: unless-stopped
     image: jaegertracing/all-in-one:latest
     ports:
       - "16686:16686"
@@ -49,6 +52,7 @@ services:
     build:
       context: ./backend
       target: production
+    restart: unless-stopped
     volumes: []
     environment:
       DATABASE_URL: postgresql://mint_user:mint_pass@postgres:5432/mint_db
@@ -64,6 +68,7 @@ services:
     command: celery -A app.core.celery_app beat --loglevel=info
 
   frontend:
+    restart: unless-stopped
     build:
       context: ./frontend
       target: production
