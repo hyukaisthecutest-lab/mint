@@ -6,6 +6,10 @@ export function useAudioRecorder() {
   const chunksRef = useRef<Blob[]>([]);
 
   const start = async (): Promise<void> => {
+    if (!navigator.mediaDevices?.getUserMedia) {
+      alert("Microphone requires HTTPS. Please use the text input instead.");
+      return;
+    }
     const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
     const recorder = new MediaRecorder(stream);
     chunksRef.current = [];
