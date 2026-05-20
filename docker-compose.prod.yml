@@ -27,6 +27,31 @@ services:
       ENVIRONMENT: production
     command: celery -A app.core.celery_app worker --loglevel=info
 
+  jaeger:
+    image: jaegertracing/all-in-one:latest
+    ports:
+      - "16686:16686"
+      - "4317:4317"
+    environment:
+      COLLECTOR_OTLP_ENABLED: "true"
+
+  celery_beat:
+    build:
+      context: ./backend
+      target: production
+    volumes: []
+    environment:
+      DATABASE_URL: postgresql://mint_user:mint_pass@postgres:5432/mint_db
+      REDIS_URL: redis://redis:6379/0
+      SECRET_KEY: ${SECRET_KEY}
+      ENVIRONMENT: production
+      SMTP_HOST: ${SMTP_HOST}
+      SMTP_PORT: ${SMTP_PORT}
+      SMTP_USER: ${SMTP_USER}
+      SMTP_PASSWORD: ${SMTP_PASSWORD}
+      SMTP_FROM: ${SMTP_FROM}
+    command: celery -A app.core.celery_app beat --loglevel=info
+
   frontend:
     build:
       context: ./frontend

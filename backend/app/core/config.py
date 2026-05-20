@@ -11,6 +11,13 @@ class Settings(BaseSettings):
     ALGORITHM: str = "HS256"
     ENVIRONMENT: str = "development"
     BACKEND_CORS_ORIGINS: str = '["http://localhost:5173","http://localhost:3000"]'
+    OPENAI_API_KEY: str = ""
+    OTEL_ENDPOINT: str = "http://jaeger:4317"
+    SMTP_HOST: str = "smtp.gmail.com"
+    SMTP_PORT: int = 587
+    SMTP_USER: str = ""
+    SMTP_PASSWORD: str = ""
+    SMTP_FROM: str = ""
 
     def get_cors_origins(self) -> List[str]:
         if not self.BACKEND_CORS_ORIGINS:

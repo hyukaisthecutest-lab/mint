@@ -6,6 +6,8 @@ import Register from "./pages/Register";
 import Dashboard from "./pages/Dashboard";
 import Accounts from "./pages/Accounts";
 import Transactions from "./pages/Transactions";
+import Chat from "./pages/Chat";
+import AgentDashboard from "./pages/AgentDashboard";
 
 function ProtectedRoute({ children }: { children: React.ReactNode }) {
   const token = useAuthStore((s) => s.token);
@@ -30,6 +32,8 @@ export default function App() {
           <Route path="dashboard" element={<Dashboard />} />
           <Route path="accounts" element={<Accounts />} />
           <Route path="transactions" element={<Transactions />} />
+          <Route path="chat" element={<Chat />} />
+          <Route path="agent" element={<AgentDashboard />} />
         </Route>
       </Routes>
     </BrowserRouter>

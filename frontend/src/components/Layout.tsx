@@ -1,13 +1,18 @@
 import { Outlet, NavLink, useNavigate } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
-import { LayoutDashboard, CreditCard, ArrowLeftRight, LogOut, Leaf } from "lucide-react";
+import { LayoutDashboard, CreditCard, ArrowLeftRight, LogOut, Leaf, MessageCircle, Radio } from "lucide-react";
 import { useAuthStore } from "../store/authStore";
 import { getMe } from "../api/auth";
 
-const navItems = [
+const baseNavItems = [
   { to: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
   { to: "/accounts", label: "Accounts", icon: CreditCard },
   { to: "/transactions", label: "Transactions", icon: ArrowLeftRight },
+  { to: "/chat", label: "AI Assistant", icon: MessageCircle },
+];
+
+const adminNavItems = [
+  { to: "/agent", label: "Agent Status", icon: Radio },
 ];
 
 export default function Layout() {
@@ -36,7 +41,7 @@ export default function Layout() {
           <span className="text-2xl font-bold tracking-tight">mint</span>
         </div>
         <nav className="flex-1 p-4 space-y-1">
-          {navItems.map(({ to, label, icon: Icon }) => (
+          {[...baseNavItems, ...(user?.is_admin ? adminNavItems : [])].map(({ to, label, icon: Icon }) => (
             <NavLink
               key={to}
               to={to}
