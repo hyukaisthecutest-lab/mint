@@ -1,0 +1,84 @@
+version: "3.9"
+
+services:
+  postgres:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: mint_user
+      POSTGRES_PASSWORD: mint_pass
+      POSTGRES_DB: mint_db
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U mint_user -d mint_db"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  redis:
+    image: redis:7-alpine
+    ports:
+      - "6379:6379"
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  backend:
+    build:
+      context: ./backend
+      target: development
+    ports:
+      - "8000:8000"
+    environment:
+      DATABASE_URL: postgresql://mint_user:mint_pass@postgres:5432/mint_db
+      REDIS_URL: redis://redis:6379/0
+      SECRET_KEY: dev-secret-key-change-in-production
+      ACCESS_TOKEN_EXPIRE_MINUTES: 60
+      ENVIRONMENT: development
+      BACKEND_CORS_ORIGINS: '["http://localhost:5173","http://localhost:3000"]'
+    volumes:
+      - ./backend:/app
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    command: uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
+
+  celery_worker:
+    build:
+      context: ./backend
+      target: development
+    environment:
+      DATABASE_URL: postgresql://mint_user:mint_pass@postgres:5432/mint_db
+      REDIS_URL: redis://redis:6379/0
+      SECRET_KEY: dev-secret-key-change-in-production
+      ENVIRONMENT: development
+    volumes:
+      - ./backend:/app
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    command: celery -A app.core.celery_app worker --loglevel=info
+
+  frontend:
+    build:
+      context: ./frontend
+      target: development
+    ports:
+      - "5173:5173"
+    environment:
+      VITE_API_URL: http://backend:8000
+    volumes:
+      - ./frontend:/app
+      - /app/node_modules
+    command: npm run dev -- --host
+
+volumes:
+  postgres_data:

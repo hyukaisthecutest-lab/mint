@@ -1,0 +1,44 @@
+# Python
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+.Python
+env/
+venv/
+.venv/
+*.egg-info/
+dist/
+build/
+.pytest_cache/
+.ruff_cache/
+.mypy_cache/
+
+# Node
+node_modules/
+dist/
+.next/
+out/
+
+# Env
+.env
+.env.local
+.env.*.local
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# AWS CDK
+infrastructure/.venv/
+infrastructure/cdk.out/
+infrastructure/*.js
+infrastructure/*.d.ts
+
+# Misc
+*.log
+.DS_Store
+coverage/
+htmlcov/

@@ -1,0 +1,23 @@
+{
+  "family": "mint-worker",
+  "networkMode": "awsvpc",
+  "requiresCompatibilities": ["FARGATE"],
+  "cpu": "256",
+  "memory": "512",
+  "containerDefinitions": [
+    {
+      "name": "worker",
+      "image": "PLACEHOLDER",
+      "command": ["celery", "-A", "app.core.celery_app", "worker", "--loglevel=info", "-Q", "sync"],
+      "essential": true,
+      "logConfiguration": {
+        "logDriver": "awslogs",
+        "options": {
+          "awslogs-group": "/ecs/mint-worker",
+          "awslogs-region": "us-east-1",
+          "awslogs-stream-prefix": "ecs"
+        }
+      }
+    }
+  ]
+}
