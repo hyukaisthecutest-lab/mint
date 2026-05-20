@@ -17,7 +17,7 @@ def sync_account_transactions(self, account_id: str, user_id: str):
             db.query(ThirdPartyTransaction)
             .filter(
                 ThirdPartyTransaction.external_account_id == account.external_account_id,
-                ThirdPartyTransaction.is_synced == False,
+                ThirdPartyTransaction.is_synced.is_(False),
             )
             .all()
         )

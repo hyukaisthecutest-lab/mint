@@ -7,7 +7,7 @@ from app.core.database import get_db
 from app.models.user import User
 from app.models.account import Account
 from app.models.transaction import Transaction
-from app.schemas.transaction import DashboardResponse, SpendingByCategoryResponse, TransactionResponse
+from app.schemas.transaction import DashboardResponse, SpendingByCategoryResponse
 from app.dependencies import get_current_user
 
 router = APIRouter(prefix="/dashboard", tags=["dashboard"])
@@ -19,7 +19,7 @@ def get_dashboard(current_user: User = Depends(get_current_user), db: Session = 
     month_start = today.replace(day=1)
 
     total_balance = db.query(func.sum(Account.balance)).filter(
-        Account.user_id == current_user.id, Account.is_active == True
+        Account.user_id == current_user.id, Account.is_active
     ).scalar() or Decimal("0")
 
     monthly_spending = db.query(func.sum(Transaction.amount)).filter(

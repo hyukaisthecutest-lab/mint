@@ -1,5 +1,5 @@
 import uuid
-from fastapi import APIRouter, Depends, HTTPException, status, BackgroundTasks
+from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
 from app.core.database import get_db
 from app.models.user import User
@@ -14,7 +14,7 @@ router = APIRouter(prefix="/accounts", tags=["accounts"])
 
 @router.get("", response_model=list[AccountResponse])
 def list_accounts(current_user: User = Depends(get_current_user), db: Session = Depends(get_db)):
-    return db.query(Account).filter(Account.user_id == current_user.id, Account.is_active == True).all()
+    return db.query(Account).filter(Account.user_id == current_user.id, Account.is_active).all()
 
 
 @router.post("", response_model=AccountResponse, status_code=status.HTTP_201_CREATED)
@@ -70,7 +70,7 @@ def sync_all_accounts(
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db),
 ):
-    accounts = db.query(Account).filter(Account.user_id == current_user.id, Account.is_active == True).all()
+    accounts = db.query(Account).filter(Account.user_id == current_user.id, Account.is_active).all()
     results = []
     for account in accounts:
         task = sync_account_transactions.delay(account.id, current_user.id)
