@@ -6,7 +6,7 @@ from uuid import UUID
 from opentelemetry import trace
 from langchain_core.callbacks.base import BaseCallbackHandler
 from app.core.telemetry import (
-    tracer, agent_blocked, agent_errors,
+    tracer, agent_errors,
     agent_duration, tool_calls, token_usage,
 )
 from app.core.metrics_store import store
@@ -73,7 +73,6 @@ class AgentObserver(BaseCallbackHandler):
     def on_tool_end(self, output: str, *, run_id: UUID, **kw: Any) -> None:
         elapsed = time.perf_counter() - self._t.pop(run_id, time.perf_counter())
         span = self._spans.pop(run_id, None)
-        tool_name = span.name if span else "unknown"
         tool_name_val = span.attributes.get("tool.name", "unknown") if span else "unknown"
         tool_calls.labels(tool=tool_name_val, success="true").inc()
         store.record_tool(tool_name_val)
