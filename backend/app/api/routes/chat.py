@@ -20,7 +20,14 @@ from app.agent.graph import create_graph
 
 router = APIRouter(prefix="/chat", tags=["chat"])
 logger = logging.getLogger("mint.chat")
-_openai = OpenAI(api_key=settings.OPENAI_API_KEY)
+_openai: OpenAI | None = None
+
+
+def _get_openai() -> OpenAI:
+    global _openai
+    if _openai is None:
+        _openai = OpenAI(api_key=settings.OPENAI_API_KEY)
+    return _openai
 
 _RETRY = dict(
     stop=stop_after_attempt(3),
@@ -51,7 +58,7 @@ def _invoke_agent(user_id: str, db: Session, messages: list) -> str:
 
 @retry(**_RETRY)
 def _tts(text: str) -> str:
-    tts = _openai.audio.speech.create(model="tts-1", voice="nova", input=text)
+    tts = _get_openai().audio.speech.create(model="tts-1", voice="nova", input=text)
     return base64.b64encode(tts.read()).decode()
 
 
@@ -128,7 +135,7 @@ def chat(
 @retry(**_RETRY)
 def _transcribe(buf: io.BytesIO) -> str:
     buf.seek(0)
-    return _openai.audio.transcriptions.create(model="whisper-1", file=buf).text
+    return _get_openai().audio.transcriptions.create(model="whisper-1", file=buf).text
 
 
 @router.post("/transcribe")
